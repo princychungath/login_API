@@ -2,34 +2,64 @@ from rest_framework import generics
 from .models import Book
 from .serializers import BookSerializer
 from rest_framework.permissions import IsAuthenticated 
-from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
-from rest_framework import viewsets
-from django.contrib.auth.models import User
+from rest_framework.authentication import TokenAuthentication
+from .pagination import MyCustomPagination
 
 
-
-
-class BookCreateList(generics.ListCreateAPIView):
+class BookLists(generics.ListAPIView):
     queryset = Book.objects.all()
     serializer_class=BookSerializer
+    pagination_class=MyCustomPagination
 
-    def get_queryset(self):
-        return Book.objects.filter(author=self.request.user.pk).all()
+class BookCreate(generics.CreateAPIView):
+    queryset = Book.objects.all()
+    serializer_class=BookSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes=[TokenAuthentication]
+
+    def perform_create(self,serializer):
+        serializer.save(author=self.request.user)
+
+    def post(self,request,*args,**kwargs):
+        response=super().post(request,*args,**kwargs)
+        return Response({"message":"book created"}, status=200)
 
 
-class CustomAuthToken(ObtainAuthToken):
+class BookDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
 
-    def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data,
-                                           context={'request': request})
-        serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        token, created = Token.objects.get_or_create(user=user)
-        return Response({
-            'token': token.key,
-            'user_id': user.pk,
-            'username': user.username,
-        })
+    def patch(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            if instance.author != request.user:
+                raise Exception("User is not the author of the book")
+            return super().patch(request, *args, **kwargs)
+        except Exception as e:
+            return Response({'error': str(e)})
 
+
+    def put(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            if instance.author != request.user:
+                raise Exception("User is not the author of the book")
+            return super().put(request, *args, **kwargs)
+        except Exception as e:
+            return Response({'error': str(e)})
+
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            if instance.author != request.user:
+                raise Exception("User is not the author of the book")
+            response = super().delete(request, *args, **kwargs)
+            return Response({'message': 'Book deleted'})
+        except Exception as e:
+            return Response({'error': str(e)})
+    
+    
