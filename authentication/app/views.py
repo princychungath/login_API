@@ -1,7 +1,7 @@
 from rest_framework import generics
 from .models import Book
 from .serializers import BookSerializer
-from rest_framework.permissions import IsAuthenticated 
+from rest_framework.permissions import IsAuthenticated,AllowAny
 from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication
 from .pagination import MyCustomPagination
@@ -11,6 +11,11 @@ class BookLists(generics.ListAPIView):
     queryset = Book.objects.all()
     serializer_class=BookSerializer
     pagination_class=MyCustomPagination
+
+class BookDetail(generics.RetrieveAPIView):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+    permission_classes = [AllowAny]
 
 class BookCreate(generics.CreateAPIView):
     queryset = Book.objects.all()
@@ -26,7 +31,7 @@ class BookCreate(generics.CreateAPIView):
         return Response({"message":"book created"}, status=200)
 
 
-class BookDetail(generics.RetrieveUpdateDestroyAPIView):
+class BookUpdate(generics.UpdateAPIView):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticated]
@@ -41,7 +46,6 @@ class BookDetail(generics.RetrieveUpdateDestroyAPIView):
         except Exception as e:
             return Response({'error': str(e)})
 
-
     def put(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
@@ -50,6 +54,13 @@ class BookDetail(generics.RetrieveUpdateDestroyAPIView):
             return super().put(request, *args, **kwargs)
         except Exception as e:
             return Response({'error': str(e)})
+
+
+class BookDestroy(generics.DestroyAPIView):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
 
 
     def delete(self, request, *args, **kwargs):
